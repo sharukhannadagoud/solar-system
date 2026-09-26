@@ -13,10 +13,10 @@ jobs:
         runs-on: ubuntu-latest
         steps:
         - name: Checkout Repository
-          uses: actions/checkout@v4
+          uses: actions/checkout@v7
 
         - name: Setup NodeJS Version
-          uses: actions/setup-node@v3
+          uses: actions/setup-node@v7
           with:
             node-version: 20
     
