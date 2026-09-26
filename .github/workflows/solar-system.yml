@@ -33,6 +33,6 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v7
         with:
-            name: mocha test results
-            path: test-result.xml
+          name: mocha test results
+          path: test-result.xml
       
