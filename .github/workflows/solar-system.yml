@@ -29,7 +29,16 @@ jobs:
 
       - name: Unit Testing
         run: npm test
-      
+
+      - name: Find test result
+        run: |
+          echo "Current directory:"
+          pwd
+          echo "Files:"
+          ls -la
+          echo "XML files:"
+          find . -name "*.xml" -type f
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v7
         with:
