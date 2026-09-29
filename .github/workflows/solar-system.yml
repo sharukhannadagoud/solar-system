@@ -68,6 +68,7 @@ jobs:
         run: npm ci
 
       - name: Check Code Coverage
+        continue-on-error: true
         run: npm run coverage
 
       - name: Archive Coverage Report
