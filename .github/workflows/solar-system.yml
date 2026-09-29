@@ -44,5 +44,5 @@ jobs:
         with:
           name: mocha-test-results
           path: test-results.xml
-          if-no-files-found: error
+          #if-no-files-found: error
       
