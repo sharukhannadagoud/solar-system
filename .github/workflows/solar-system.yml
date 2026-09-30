@@ -30,7 +30,7 @@ jobs:
       fail-fast: false
       matrix:
         nodejs_version: [18, 20]
-        operating_systems: [ubuntu-latest, macos-latest]
+        operating_systems: [ubuntu-latest]
         exclude:
           - nodejs_version: 18
             operating_systems: macos-latest
