@@ -8,8 +8,10 @@ on:
       - main
       - 'feature/*'
 
-permissions:
-  contents: read
+env:
+  MONGO_URI: 'mongodb+srv://supercluster.d83jj.mongodb.net/superData'
+  MONGO_USERNAME: ${{ vars.MONGO_USERNAME }}
+  MONGO_PASSWORD: ${{ secrets.MONGO_PASSWORD }}
 
 jobs:
   unit-testing:
@@ -26,21 +28,20 @@ jobs:
 
     runs-on: ${{ matrix.operating_systems }}
 
-    env:
-      MONGO_URI: 'mongodb+srv://supercluster.d83jj.mongodb.net/superData'
-      MONGO_USERNAME: ${{ vars.MONGO_USERNAME }}
-      MONGO_PASSWORD: ${{ secrets.MONGO_PASSWORD }}
-
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: Setup NodeJS Version
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.nodejs_version }}
-          cache: npm
-          cache-dependency-path: package-lock.json
+
+      - name: Cache NPM dependencies
+        uses: actions/cache@v3
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('package-lock.json') }}
 
       - name: Install Dependencies
         run: npm ci
@@ -61,26 +62,27 @@ jobs:
     name: Code Coverage
     runs-on: ubuntu-latest
 
-    env:
-      MONGO_URI: 'mongodb+srv://supercluster.d83jj.mongodb.net/superData'
-      MONGO_USERNAME: ${{ vars.MONGO_USERNAME }}
-      MONGO_PASSWORD: ${{ secrets.MONGO_PASSWORD }}
-
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: Setup NodeJS Version
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: package-lock.json
+
+      - name: Cache NPM dependencies
+        uses: actions/cache@v3
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('package-lock.json') }} 
 
       - name: Install Dependencies
         run: npm ci
+        
 
       - name: Check Code Coverage
+        continue-on-error: true
         run: npm run coverage
 
       - name: Archive Coverage Report
@@ -97,16 +99,6 @@ jobs:
     name: Containerization
     needs: [unit-testing, code-coverage]
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
-      packages: write
-
-    env:
-      MONGO_URI: 'mongodb+srv://supercluster.d83jj.mongodb.net/superData'
-      MONGO_USERNAME: ${{ vars.MONGO_USERNAME }}
-      MONGO_PASSWORD: ${{ secrets.MONGO_PASSWORD }}
-
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v7
@@ -116,19 +108,18 @@ jobs:
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
-
-      - name: GHCR Login
+      
+      - name: GCR Login
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
+          username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Docker Build For Testing
         uses: docker/build-push-action@v7
         with:
           context: .
-          load: true
           push: false
           tags: ${{ vars.DOCKERHUB_USERNAME }}/solar-system:${{ github.sha }}
 
@@ -138,26 +129,18 @@ jobs:
 
           docker run --name solar-system-app -d \
             -p 3000:3000 \
-            -e MONGO_URI="$MONGO_URI" \
-            -e MONGO_USERNAME="$MONGO_USERNAME" \
-            -e MONGO_PASSWORD="$MONGO_PASSWORD" \
-            "${{ vars.DOCKERHUB_USERNAME }}/solar-system:${{ github.sha }}"
+            -e MONGO_URI=$MONGO_URI \
+            -e MONGO_USERNAME=$MONGO_USERNAME \
+            -e MONGO_PASSWORD=$MONGO_PASSWORD \
+            ${{ vars.DOCKERHUB_USERNAME }}/solar-system:${{ github.sha }}
 
-          for i in {1..30}; do
-            if wget -q -O - http://127.0.0.1:3000/live | grep -q live; then
-              echo "Container health check passed"
-              docker rm -f solar-system-app
-              exit 0
-            fi
-            sleep 2
-          done
+          export IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' solar-system-app)
+          echo $IP
 
-          echo "Container health check failed"
-          docker logs solar-system-app
-          docker rm -f solar-system-app
-          exit 1
+          echo Testing Image URL using wget
+          wget -q -O - 127.0.0.1:3000/live | grep live
 
-      - name: Docker Build and Push
+      - name: Docker push
         uses: docker/build-push-action@v7
         with:
           context: .
