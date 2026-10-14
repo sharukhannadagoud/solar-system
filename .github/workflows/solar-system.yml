@@ -198,10 +198,6 @@ jobs:
         echo "-----------------------------"
         kubectl get nodes
         kubectl get pods
-
-    - name: Save Nginx Ingress Controller IP as a GITHUB Environment Variable
-      run: |
-        echo "INGRESS_IP=$(kubectl -n ingress-nginx get service ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].ip}')" >> $GITHUB_ENV
     
     - name: Save Nginx Ingress Controller IP
       run: |
@@ -217,20 +213,6 @@ jobs:
         fi
 
         echo "INGRESS_IP=$INGRESS_IP" >> "$GITHUB_ENV"
-
-    - name: Save Nginx Ingress Controller IP
-      run: |
-        INGRESS_IP=$(kubectl -n ingress-nginx get service ingress-nginx-controller 
-          -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-
-        if [ -z "$INGRESS_IP" ]; then
-          echo "ERROR: Nginx Ingress Controller external IP is empty."
-          kubectl -n ingress-nginx get service ingress-nginx-controller
-          exit 1
-        fi
-
-        echo "INGRESS_IP=$INGRESS_IP" >> "$GITHUB_ENV"
-        echo "Nginx Ingress IP: $INGRESS_IP"
 
     - name: Replace Token in Manifest files
       uses: cschleiden/replace-tokens@v1
