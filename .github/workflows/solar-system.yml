@@ -255,3 +255,28 @@ jobs:
     - name: Set App Ingress Host URL
       run: |
         echo "APP_INGRESS_HOST=$(kubectl -n ${{ vars.NAMESPACE }} get ingress -o jsonpath="{.items[0].spec.rules[0].host}")" >> $GITHUB_ENV
+  integration-testing:
+    name: Integration Testing
+    needs: dev-deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Test Application
+        env:
+          APP_INGRESS_HOST: ${{ needs.dev-deploy.outputs.APP_INGRESS_HOST }}
+        run: |
+          echo "Testing application at: https://$APP_INGRESS_HOST"
+
+          RESPONSE=$(curl -k -s "https://$APP_INGRESS_HOST/live")
+
+          echo "Response:"
+          echo "$RESPONSE"
+
+          STATUS=$(echo "$RESPONSE" | jq -r '.status')
+
+          if [ "$STATUS" != "live" ]; then
+            echo "Integration test failed"
+            exit 1
+          fi
+
+          echo "Integration test passed" 
